@@ -66,8 +66,11 @@ void fill_argv(char *tmp_argv) {
 	}
 }
 
-
-
-
-
+void copy_envy(char **envp) {
+	int index = 0;
+	for ( ; envp[index] != NULL; index++) {
+		my_envp[index] = (char *)malloc(sizeof(char)*(strlen(envp[index])+1));
+		memcpy(my_envp[index], envp[index], strlen(envp[index]));
+	}
+}
 
