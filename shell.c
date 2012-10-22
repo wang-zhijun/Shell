@@ -22,21 +22,9 @@ handle_signal(int signo) {
 	fflush(stdout);
 }
 
-int
-main(int argc, char **argv, char **envp) {
-	int c;
-	signal(SIGINT, SIG_IGN);
-	signal(SIGINT, handle_signal);
-	printf("\n[MY_SHELL ] ");
-	while( (c=getchar()) != EOF) {
-		if( c == '\n')
-			printf("[MY_SHELL ] ");
-	}
-	printf("\n"); /* make MY_SHELL and the prompt not in the same line */
-	return 0;
-}
 
-void fill_argv(char *tmp_argv) {
+void 
+fill_argv(char *tmp_argv) {
 	char *foo = tmp_argv;
 	int index = 0; /* maximum 10 argument */
 	char ret[100];
@@ -66,7 +54,8 @@ void fill_argv(char *tmp_argv) {
 	}
 }
 
-void copy_envy(char **envp) {
+void 
+copy_envp(char **envp) {
 	int index = 0;
 	for ( ; envp[index] != NULL; index++) {
 		my_envp[index] = (char *)malloc(sizeof(char)*(strlen(envp[index])+1));
@@ -74,3 +63,118 @@ void copy_envy(char **envp) {
 	}
 }
 
+int 
+attach_path(char *cmd) {
+	char ret[100];
+	int index;
+	int fd;
+	bzero(ret,100);
+	for(index = 0; search_path[index] != NULL; index++) {
+		strcpy(ret,search_path[index]);
+		strncat(ret, cmd, strlen(cmd));
+		if((fd = open(ret, O_RDONLY)) > 0) {
+			/* Copy the full path to 'cmd' */
+			strncpy(cmd, ret, strlen(ret));
+			close(fd);
+			return 0;
+		}
+	}
+	return 0;
+}
+
+/* Copy 'PATH' variable to bin_path after searching */
+void 
+get_path_string(char **tmp_envp, char *bin_path) {
+	int count = 0;
+	char *tmp;
+	while(1) {
+		tmp = strstr(tmp_envp[count], "PATH");
+		if(tmp == NULL)
+			count++;
+		else
+			break;
+	}
+	strncpy(bin_path, tmp, strlen(tmp));
+}
+
+void
+insert_path_str_to_search(char *path_str) {
+	int index = 0;
+	char *tmp = path_str;
+	char ret[100];
+
+	/* PATH=.....,try to find the '='*/
+	while(*tmp != '=')
+		tmp++;
+	tmp++;
+
+	while(*tmp != '\0') {
+		if(*tmp == ':') {
+			strncat(ret, "/", 1);
+			search_path[index] = (char *)malloc(sizeof(char) * (strlen(ret)+1));
+			strncat(search_path[index], ret, strlen(ret));
+			strncat(search_path[index], "\0", 1);
+			index++;
+			bzero(ret, 100);
+		}
+		else 
+			strncat(ret, tmp, 1);
+
+		tmp++;
+	}
+}
+
+
+void
+call_execve(char *cmd) {
+	int i;
+	printf("cmd is %s\n", cmd);
+	if(fork() == 0) {
+		i = execve(cmd, my_argv, my_envp);
+		printf("errno is %d\n", errno);
+		if( i < 0 ) {
+			printf("%s: %s\n", cmd, "Command not found");
+			exit(1);
+		}
+	}
+	else {
+		wait(NULL);
+	}
+}
+
+void
+free_argv() {
+	int index;
+	for(index = 0; my_argv[index] != NULL; index++) {
+		bzero(my_argv[index], strlen(my_argv[index])+1);
+		my_argv[index] = NULL;
+		free(my_argv[index]);
+	}
+}
+
+
+int
+main(int argc, char *argv[], char *envp[]) {
+	int c;
+	int i, fd;
+
+	/* Allocate 100 bytes */
+	char *tmp = (char *)malloc(sizeof(char) * 100);
+
+	/* Allocate 256 bytes */
+	char *path_str = (char *)malloc(sizeof(char) * 256);
+
+	char *cmd = (char *)malloc(sizeof(char) * 100);
+
+
+	signal(SIGINT, SIG_IGN);
+	signal(SIGINT, handle_signal);
+
+	/* Copy envp to global variable my_envp 
+	 * my_envp is a 100 element array */
+	copy_envp(envp);
+
+	/* Find the line with 'PATH' from 'envp'  
+	 * and copy the line
+	 * to path_str ( maximum 256 bytes) */
+	get_path_string(my_envp, path_str);
