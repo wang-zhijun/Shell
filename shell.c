@@ -1,31 +1,19 @@
 /* program from linuxgazette.net */
 /* 'cd' command is supported */
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <signal.h>
-#include <string.h>
-#include <sys/wait.h>
-#include <sys/types.h>
-#include <ctype.h>
-#include <errno.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-
-extern int errno;
+/* Ctrl-d doesn't send a signal, but indicates an EOF on input*/
+#include "def.h"
 typedef void (*sighandler_t)(int);
-static char *my_argv[100], *my_envp[100];
-static char *search_path[10];
-static char current_dir[1024];
 
-void shell_prompt(void){
-    printf("\n%s :> ", getcwd(current_dir,1024));
-}
 
 void
 handle_signal(int signo) {
+	putchar('\n');
 	shell_prompt();
 	fflush(stdout);
+}
+void 
+shell_prompt(void){
+    printf("%s :> ", getcwd(current_dir,1024));
 }
 
 
@@ -135,7 +123,8 @@ insert_path_str_to_search(char *path_str) {
 	}
 }
 
-void change_dir(void) {
+void 
+change_dir(void) {
     if(strcmp("cd",my_argv[0])== 0) {
         if(my_argv[1] == NULL) {
             chdir(getenv("HOME"));
@@ -147,7 +136,8 @@ void change_dir(void) {
 } 
 
 
-int check_builtin_command(void) {
+int 
+check_builtin_command(void) {
     if(strcmp("exit",my_argv[0]) == 0)
         exit(EXIT_SUCCESS);
     if(strcmp("cd", my_argv[0]) == 0) {
