@@ -1,4 +1,8 @@
 /* program from linuxgazette.net */
+/* this program can only execute command in the 
+ * current working directory.
+ * no 'cd' command is supported.*/
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -18,7 +22,7 @@ static char *search_path[10];
 
 void
 handle_signal(int signo) {
-	printf("[MY_SHELL ] ");
+	printf("\nOsama> ");
 	fflush(stdout);
 }
 
@@ -28,13 +32,13 @@ fill_argv(char *tmp_argv) {
 	char *foo = tmp_argv;
 	int index = 0; /* maximum 10 argument */
 	char ret[100];
-	bezero(ret, 100);
+	bzero(ret, 100);
 	while(*foo != '\0') {
 		if(index == 10)
 			break;
 		if(*foo == ' ') {
 			if(my_argv[index] == NULL)
-				my_argv[index] = (char *)malloc(sizeof(char) * strlen(ret) + 1)
+				my_argv[index] = (char *)malloc(sizeof(char) * strlen(ret) + 1);
 			else {
 				bzero(my_argv[index], strlen(my_argv[index]));
 			}
@@ -202,6 +206,57 @@ main(int argc, char *argv[], char *envp[]) {
 				if ( tmp[0] == '\0')
 					printf("Osama> ");
 				else {
+					/* fill my_argv[] */
 					fill_argv(tmp);
+
+					/* cmd has maximum 100 chars*/
+					strncpy(cmd, my_argv[0], strlen(my_argv[0]));
+					strncat(cmd, "\0", 1);
+					/* if just the relative path is given
+					 * not the full path  */
+					if(index(cmd, '/') == NULL) {
+						/* find the cmd in the search_path[] and 
+						 * make cmd full path using strncpy()*/
+						if(attach_path(cmd) == 0) {
+							/* use fork to execute the cmd
+							 * and the parent is wait(ing)!*/
+							call_execve(cmd);
+						}
+						else {
+							printf("%s: command not found\n", cmd);
+						}
+					}
+					/* if the full path is given */
+					else {
+						if((fd = open(cmd, O_RDONLY)) > 0) {
+							close(fd);
+							call_execve(cmd);
+						}
+						else {
+							printf("%s: command not found\n",cmd);
+						}
+					}
+					free_argv();
+					printf("Osama> ");
+					bzero(cmd, 100);
+				}
+				bzero(tmp, 100);
+				break;
+			default:
+				strncat(tmp, &c, 1);
+				break;
+		}
+	}
+	free(tmp);
+	free(path_str);
+	for(i = 0; my_envp[i] != NULL; i++) 
+		free(my_envp[i]);
+	for(i = 0; i < 10; i++)
+		free(search_path[i]);
+	printf("\n");
+	return 0;
+}
+
+
 
 
