@@ -43,15 +43,15 @@ fill_argv(char *tmp_argv) {
 			bzero(ret,100);
 			index++;
 		}else 
-			strncat(ret, 100, 1);
+			strncat(ret, foo, 1);
 		
 		foo++;
 	}
-	if(ret[0] != '\0') {
-		my_argv[index] = (char *)malloc(sizeof(char) *strlen(ret) + 1);
-		strncpy(my_argv[index], ret, strlen(ret));
-		strncat(my_argv[index], "\0", 1);
-	}
+	/* Prepare the last parameter */
+	my_argv[index] = (char *)malloc(sizeof(char) *strlen(ret) + 1);
+	strncpy(my_argv[index], ret, strlen(ret));
+	strncat(my_argv[index], "\0", 1);
+
 }
 
 void 
@@ -108,13 +108,17 @@ insert_path_str_to_search(char *path_str) {
 		tmp++;
 	tmp++;
 
+	/* see 122th line first */
 	while(*tmp != '\0') {
 		if(*tmp == ':') {
 			strncat(ret, "/", 1);
+
+			/* Allocating space for copying */
 			search_path[index] = (char *)malloc(sizeof(char) * (strlen(ret)+1));
 			strncat(search_path[index], ret, strlen(ret));
 			strncat(search_path[index], "\0", 1);
 			index++;
+			/* initialize ret to '\0's*/
 			bzero(ret, 100);
 		}
 		else 
@@ -178,3 +182,26 @@ main(int argc, char *argv[], char *envp[]) {
 	 * and copy the line
 	 * to path_str ( maximum 256 bytes) */
 	get_path_string(my_envp, path_str);
+
+	/* Dissect path_str, put every part to search_path[] */
+	insert_path_str_to_search(path_str);
+
+	if(fork() == 0)  {
+		execve("/usr/bin/clear", argv, my_envp);
+		exit(1);
+	}
+	else 
+		wait(NULL);
+
+	printf("Osama> ");
+	fflush(stdout);
+	while(c != EOF) {
+		c = getchar();
+		switch(c) {
+			case '\n':
+				if ( tmp[0] == '\0')
+					printf("Osama> ");
+				else {
+					fill_argv(tmp);
+
+
