@@ -135,28 +135,44 @@ insert_path_str_to_search(char *path_str) {
 	}
 }
 
+void change_dir(void) {
+    if(strcmp("cd",my_argv[0])== 0) {
+        if(my_argv[1] == NULL) {
+            chdir(getenv("HOME"));
+        }   
+        else
+            if(chdir(my_argv[1]) == -1) 
+                printf(" %s: no such directory\n",my_argv[1]);
+    }
+} 
+
+
+int check_builtin_command(void) {
+    if(strcmp("exit",my_argv[0]) == 0)
+        exit(EXIT_SUCCESS);
+    if(strcmp("cd", my_argv[0]) == 0) {
+        change_dir();
+        return 1;
+    }   
+}
+
+
+
 
 void
 call_execve(char *cmd) {
 	int i;
-	printf("cmd is %s\n", cmd);
-	if(strcmp("cd",my_argv[0])== 0) {
-		if(my_argv[1] == NULL) {
-			chdir(getenv("HOME"));
-		}
-		else
-			if(chdir(my_argv[1]) == -1) 
-				printf(" %s: no such directory\n",my_argv[1]);
-			
-		return;
-	}
-	if(fork() == 0) {
-			i = execve(cmd, my_argv, my_envp);
-			printf("errno is %d\n", errno);
-			if( i < 0 ) {
-				printf("%s: %s\n", cmd, "Command not found");
-				exit(1);
-			}
+//	printf("cmd is %s\n", cmd);
+    
+    check_builtin_command();
+   
+    if(fork() == 0) {
+        i = execve(cmd, my_argv, my_envp);
+        printf("errno is %d\n", errno);
+        if( i < 0 ) {
+            printf("%s: %s\n", cmd, "Command not found");
+            exit(1);
+        }
 	}
 	else {
 		wait(NULL);
@@ -272,7 +288,5 @@ main(int argc, char *argv[], char *envp[]) {
 	printf("\n");
 	return 0;
 }
-
-
 
 
