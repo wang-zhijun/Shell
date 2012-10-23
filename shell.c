@@ -1,8 +1,5 @@
 /* program from linuxgazette.net */
-/* this program can only execute command in the 
- * current working directory.
- * no 'cd' command is supported.*/
-
+/* 'cd' command is supported */
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -19,12 +16,18 @@ extern int errno;
 typedef void (*sighandler_t)(int);
 static char *my_argv[100], *my_envp[100];
 static char *search_path[10];
+static char current_dir[1024];
+
+void shell_prompt(void){
+    printf("\n%s :> ", getcwd(current_dir,1024));
+}
 
 void
 handle_signal(int signo) {
-	printf("\nOsama> ");
+	shell_prompt();
 	fflush(stdout);
 }
+
 
 
 void 
@@ -137,13 +140,23 @@ void
 call_execve(char *cmd) {
 	int i;
 	printf("cmd is %s\n", cmd);
-	if(fork() == 0) {
-		i = execve(cmd, my_argv, my_envp);
-		printf("errno is %d\n", errno);
-		if( i < 0 ) {
-			printf("%s: %s\n", cmd, "Command not found");
-			exit(1);
+	if(strcmp("cd",my_argv[0])== 0) {
+		if(my_argv[1] == NULL) {
+			chdir(getenv("HOME"));
 		}
+		else
+			if(chdir(my_argv[1]) == -1) 
+				printf(" %s: no such directory\n",my_argv[1]);
+			
+		return;
+	}
+	if(fork() == 0) {
+			i = execve(cmd, my_argv, my_envp);
+			printf("errno is %d\n", errno);
+			if( i < 0 ) {
+				printf("%s: %s\n", cmd, "Command not found");
+				exit(1);
+			}
 	}
 	else {
 		wait(NULL);
@@ -165,6 +178,7 @@ int
 main(int argc, char *argv[], char *envp[]) {
 	int c;
 	int i, fd;
+    
 
 	/* Allocate 100 bytes */
 	char *tmp = (char *)malloc(sizeof(char) * 100);
@@ -177,6 +191,9 @@ main(int argc, char *argv[], char *envp[]) {
 
 	signal(SIGINT, SIG_IGN);
 	signal(SIGINT, handle_signal);
+    
+    shell_prompt();
+    
 
 	/* Copy envp to global variable my_envp 
 	 * my_envp is a 100 element array */
@@ -197,14 +214,13 @@ main(int argc, char *argv[], char *envp[]) {
 	else 
 		wait(NULL);
 
-	printf("Osama> ");
 	fflush(stdout);
 	while(c != EOF) {
 		c = getchar();
 		switch(c) {
 			case '\n':
 				if ( tmp[0] == '\0')
-					printf("Osama> ");
+					shell_prompt();
 				else {
 					/* fill my_argv[] */
 					fill_argv(tmp);
@@ -237,7 +253,7 @@ main(int argc, char *argv[], char *envp[]) {
 						}
 					}
 					free_argv();
-					printf("Osama> ");
+					shell_prompt();
 					bzero(cmd, 100);
 				}
 				bzero(tmp, 100);
