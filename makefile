@@ -1,6 +1,6 @@
 CC = gcc
 CFlags = -g
-mybash : shell.o
+shell : shell.o
 	$(CC) $(CFLAGS) -o shell shell.o
 
 # -c says not to run the linker
