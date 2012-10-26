@@ -1,8 +1,8 @@
 CC = gcc
 CFlags = -g
-mybash : listing1.o
-	$(CC) $(CFLAGS) -o mybash listing1.o
+mybash : shell.o
+	$(CC) $(CFLAGS) -o shell shell.o
 
 # -c says not to run the linker
-listing1.o : listing1.c
-	$(CC) $(CFLAGS) -c listing1.c
+shell.o : shell.c
+	$(CC) $(CFLAGS) -c shell.c
